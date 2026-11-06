@@ -1,0 +1,26 @@
+@host = http://127.0.0.1:8000
+
+### 1. Register (HARUS SUKSES 201/200)
+POST {{host}}/api/register
+Content-Type: application/json
+
+{
+  "name": "Tester LiftLog",
+  "email": "tester@liftlog.test",
+  "password": "rahasia123",
+  "password_confirmation": "rahasia123"
+}
+
+### 2. Login (Simpan token ke variabel)
+# @name login
+POST {{host}}/api/login
+Content-Type: application/json
+
+{
+  "email": "tester@liftlog.test",
+  "password": "rahasia123"
+}
+
+
+## 3. GET /api/profile (HARUS 401 tanpa token)
+GET {{host}}/api/profile
