@@ -319,8 +319,8 @@ Tab bawah: Beranda, Katalog, Riwayat, Profil.
 
 | # | Halaman | Isi |
 |---|---------|-----|
-| 1 | Login | Email dan kata sandi |
-| 2 | Register | Nama, email, kata sandi |
+| 1 | Login | Email dan kata sandi (tanpa "Lupa kata sandi"), disclaimer bukan aplikasi medis |
+| 2 | Register | Nama, email, kata sandi (tanpa kolom ulangi sandi), checkbox wajib "Ketentuan & Privasi", disclaimer |
 | 3 | Onboarding (4 langkah) | Tujuan, pengalaman, frekuensi, hari latihan, data tubuh |
 | 4 | Program untukmu | Rekomendasi program, Pakai atau Pilih program lain |
 | 5 | Pilih program lain | 2-3 template alternatif (bisa disederhanakan jadi dialog) |
@@ -395,7 +395,9 @@ lib/
 │   │       ├── goal_step.dart
 │   │       ├── experience_step.dart
 │   │       ├── schedule_step.dart
-│   │       └── body_data_step.dart
+│   │       ├── body_data_step.dart
+│   │       ├── option_card.dart
+│   │       └── step_parts.dart
 │   │
 │   ├── home/
 │   │   ├── home_provider.dart
@@ -516,11 +518,15 @@ Aturan struktur:
 - **`core/token_storage.dart`**: token Sanctum di `flutter_secure_storage` (`read`, `save`, `clear`).
 - **Auth**: `AuthProvider` (ChangeNotifier) punya status `unknown`, `unauthenticated`, `needsOnboarding`, `authenticated`. Setelah login atau register, status ditentukan dari `GET /api/profile` (`level` terisi berarti onboarding selesai). `AuthGate` (`features/auth/pages/auth_gate.dart`) memilih layar dari status itu, jadi navigasi Login, Onboarding, Beranda otomatis, termasuk saat logout atau token kedaluwarsa. `AuthRepository.isOnboarded()` menerima respons profil langsung atau `{profile: {...}}`.
 - **`app.dart`** memasang `Provider<TokenStorage>`, `Provider<ApiClient>`, `ChangeNotifierProvider<AuthProvider>`. `home` adalah `AuthGate`. `core/router.dart` hanya berisi route named tambahan (saat ini `/register`).
-- **Validator form** di `core/utils/validators.dart` (`required`, `email`, `password` min. 8, `match`).
-- **Widget dasar**: `AppButton` (ada status loading), `AppTextField` (ada tombol lihat sandi), `AppLoading`, `AppError`.
-- **Tema** (`core/theme`): warna `black #000000`, `surface #111111`, `surfaceHigh #1C1C1E`, `border #2A2A2D`, `lime #C6FF00`, `textSecondary #9A9AA0`, `danger #FF5252`. Font dibundel di `assets/fonts/`: Oswald (judul, bobot 600 dan 700) dan Inter 18pt (teks isi, bobot 400 sampai 700), terdaftar di `pubspec.yaml`. `_head()` memakai Oswald w700.
-- `HomePage` dan `OnboardingPage` masih placeholder (judul plus tombol logout).
+- **Validator form** di `core/utils/validators.dart` (`required`, `email`, `password` min. 8, `match`, `number(label, min, max)`).
+- **Widget dasar**: `AppButton` (ada status loading), `AppTextField` (label kapital di atas field, parameter `hint` dan `textInputAction`, field `surfaceHigh` tanpa border kecuali fokus lime atau error merah, ikon mata untuk sandi), `AppLoading`, `AppError`.
+- **Tema** (`core/theme`): warna `black #000000`, `surface #111111`, `surfaceHigh #1C1C1E`, `border #2A2A2D`, `lime #C6FF00`, `textSecondary #9A9AA0`, `danger #FF5252`. Font dibundel di `assets/fonts/`: Oswald (judul, bobot 600 dan 700) dan Inter 18pt (teks isi, bobot 400 sampai 700), terdaftar di `pubspec.yaml`. `_head()` memakai Oswald w700 (sebelumnya salah memakai BarlowCondensed sehingga judul jatuh ke Inter). `displayMedium` berukuran 56 dipakai untuk judul halaman (MASUK, DAFTAR).
+- `HomePage` masih placeholder (judul plus tombol logout).
 - Layar mengambil `AuthProvider` lewat `context.watch` atau `context.read`. Layar tidak memanggil API langsung.
+- **UI Login dan Register** (sesuai Stitch, latar `surface`): header LIFTLOG dengan titik lime dan "HOME WORKOUT TRACKER", kartu hero bergambar dengan overlay gelap (`assets/images/auth_login.jpg` dan `auth_register.jpg`, terdaftar lewat `assets/images/` di `pubspec.yaml`, fallback warna polos bila file tidak ada), judul MASUK atau DAFTAR, form, tombol pill lime, tautan pindah halaman, dan disclaimer "bukan aplikasi medis". `_Brand` dan `_Hero` saat ini private dan terduplikasi di `login_page.dart` dan `register_page.dart` (rencana: pindah ke `features/auth/widgets/` bila perlu).
+- **Register**: tanpa kolom ulangi sandi (tidak ada di desain). `AuthProvider.register()` tetap menerima konfirmasi dan dipanggil dengan sandi yang sama dua kali, jadi API tidak berubah. Checkbox persetujuan wajib dicentang; bila tombol Daftar ditekan tanpa centang, muncul pesan merah dan border checkbox merah. Teks "Ketentuan & Privasi" hanya teks, belum ada halamannya.
+- **Onboarding** (4 langkah sesuai Stitch: Tujuan, Pengalaman, Frekuensi & Hari, Data tubuh): `OnboardingProvider` menahan seluruh jawaban dan `step`; `onboarding_page.dart` berisi header stepper, tombol LANJUT atau SELESAI, dan footer; tiap langkah ada di `widgets/*_step.dart`, kartu pilihan di `option_card.dart`, bagian bersama di `step_parts.dart`. Tidak ada pilihan awal; LANJUT atau SELESAI nonaktif sampai langkah itu valid. Hari latihan wajib 2-4. Rentang data tubuh harus sama dengan validasi server: berat 20-300 kg, tinggi 100-250 cm, usia 13-100. Nilai ke API: `goal` (`muscle`, `stamina`, `general`), `experience` dan `frequency` 0-2, `activity_level` (`sedentary`, `light`, `moderate`, `active`), `gender` (`male`, `female`). Gambar hero langkah 1: `assets/images/onboarding_goal.jpg` (dumbbell, fallback warna polos). Desain diubah dari Stitch: barbel diganti dumbbell, "BMR Presisi" jadi "Untuk rumus BMR", info "bukan saran medis", badge "Terkunci" dan "Rekomendasi Optimal" tidak dibuat.
+- **Alur SELESAI**: `PUT /api/profile`, lalu `AuthProvider.refreshStatus()` (memanggil `_resolveStatus()`), dan `AuthGate` pindah ke Beranda. TODO: setelah halaman "Program untukmu" ada, SELESAI membuka halaman itu dulu dan `refreshStatus()` dipanggil di akhir alurnya, supaya `training_weekdays` (hanya ada di `onboarding_provider`) tidak hilang sebelum rencana dibuat.
 
 ### Acuan UI: desain Stitch
 
@@ -532,6 +538,7 @@ Setiap layar dibangun mengikuti **screenshot desain Stitch** milik pemilik proye
 - Riwayat jadwal per rencana beserta rentang tanggal (agar kalender tanggal lampau akurat setelah rencana diganti).
 - Tambahan gerakan kamera: lunge, glute bridge, dumbbell shoulder press.
 - Tes level lewat kamera (push-up dan squat 60 detik).
+- Lupa kata sandi (reset sandi lewat email), halaman Ketentuan & Privasi, dan kartu "Sesi terakhir" di Login (ada di desain Stitch, dibuang karena belum ada data sebelum login).
 
 ## 11. Kriteria sukses (untuk pengujian dan artikel)
 
@@ -567,13 +574,13 @@ Setiap layar dibangun mengikuti **screenshot desain Stitch** milik pemilik proye
 Backend (`liftlog-api`):
 
 - [x] Proyek Laravel dibuat, database `liftlog` terhubung (TablePlus)
-- [x] Migration seluruh tabel dan `php artisan migrate` berhasil
+- [x] Migration seluruh tabel dan `php artisan migrate` berhasil (catatan: migration `profiles` sempat berupa stub tanpa `user_id` dan sudah diisi lengkap; kolom tabel lain belum diverifikasi, jalankan `migrate:fresh --seed` bila skema berubah)
 - [x] Model dan relasi (`$guarded`, `$casts`, hasMany, belongsTo)
 - [x] `GET /api/exercises` dan `GET /api/exercises/{id}` (katalog, filter `type`)
 - [x] Seeder `ExerciseSeeder` (8 gerakan, konfigurasi sendi, `youtube_id` terisi; `video_source` 6 gerakan masih placeholder)
 - [ ] Seeder `ProgramTemplateSeeder` (2-3 template)
-- [x] Auth: register, login, logout (Sanctum), buat `profiles` kosong saat register (belum dites penuh lewat REST Client)
-- [ ] Profil (`GET/PUT /api/profile`), level dihitung saat onboarding (sedang dikerjakan)
+- [x] Auth: register, login, logout (Sanctum), buat `profiles` kosong saat register dibungkus `DB::transaction` (register diuji end-to-end lewat aplikasi)
+- [x] Profil (`GET/PUT /api/profile`), `level` dihitung server dari `experience + frequency`, `activity_level` menjadi `activity_factor`, `training_weekdays` menjadi `training_days_count` (diuji lewat onboarding)
 - [ ] Template, rekomendasi, dan generate rencana
 - [ ] Rencana (CRUD, jadwal, today)
 - [ ] Sesi dan set, kalender, progres, personal record
@@ -583,9 +590,10 @@ Frontend (`liftlog_app`):
 - [x] Struktur folder dan file kosong dibuat (bagian 9)
 - [x] Dependensi di `pubspec.yaml`, izin kamera dan internet di `AndroidManifest.xml`, `minSdk` dicek
 - [x] Tema (`core/theme`), font aset (Oswald, Inter), `api_client.dart`, `token_storage.dart`, `router.dart`
-- [x] Auth Flutter: model, repository, provider, `AuthGate`, login, register (kode terpasang; UI akan disesuaikan dengan desain Stitch)
+- [x] Auth Flutter: model, repository, provider, `AuthGate`, login, register (UI sudah sesuai desain Stitch, termasuk checkbox persetujuan; register sudah diuji dengan API)
 - [ ] Katalog dan detail gerakan
-- [ ] Onboarding, Beranda
+- [x] Onboarding 4 langkah, tersimpan lewat `PUT /api/profile`
+- [ ] Program untukmu (rekomendasi template), Beranda
 - [ ] `pose/engine` plus unit test
 - [ ] Kamera live, Sesi latihan, rencana, riwayat, profil dan kalender
 

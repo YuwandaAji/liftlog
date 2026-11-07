@@ -3,18 +3,24 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Profile extends Model
 {
+    protected $guarded = [];
+
     protected $casts = [
-        'weight_kg'       => 'float',
-        'height_cm'       => 'float',
+        'experience' => 'integer',
+        'frequency' => 'integer',
+        'training_days_count' => 'integer',
+        'age' => 'integer',
+        'weight_kg' => 'float',
+        'height_cm' => 'float',
         'activity_factor' => 'float',
     ];
-    public function user() 
-    { 
-        return $this->belongsTo(User::class); 
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
-    
 }

@@ -17,4 +17,10 @@ class Validators {
 
   static String? Function(String?) match(TextEditingController other) =>
       (v) => v != other.text ? 'Kata sandi tidak sama' : null;
+
+  static String? Function(String?) number(String label, double min, double max) => (v) {
+        final n = double.tryParse((v ?? '').trim().replaceAll(',', '.'));
+        if (n == null) return '$label wajib diisi';
+        return (n < min || n > max) ? '$label ${min.toInt()}–${max.toInt()}' : null;
+      };
 }

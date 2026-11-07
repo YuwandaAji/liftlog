@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
@@ -20,8 +21,12 @@ class AuthController extends Controller
 
         // Laravel 11: model User sudah punya cast 'password' => 'hashed',
         // jadi JANGAN pakai Hash::make di sini (akan ter-hash dua kali, login gagal).
-        $user = User::create($data);
-        $user->profile()->create();   // baris profil kosong, diisi saat onboarding
+        // Transaksi: bila pembuatan profil gagal, user ikut dibatalkan (tidak ada akun menggantung).
+        $user = DB::transaction(function () use ($data) {
+            $user = User::create($data);
+            $user->profile()->create();   // baris profil kosong, diisi saat onboarding
+            return $user;
+        });
 
         return response()->json([
             'user' => $user,

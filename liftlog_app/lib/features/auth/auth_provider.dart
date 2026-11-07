@@ -44,6 +44,8 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> refreshStatus() => _resolveStatus();
+
   void clearError() {
     error = null;
     notifyListeners();

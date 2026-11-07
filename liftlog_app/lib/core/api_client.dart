@@ -4,7 +4,8 @@ import 'token_storage.dart';
 /// Ganti saat run: --dart-define=API_URL=http://192.168.1.5:8000/api
 const String kApiBaseUrl = String.fromEnvironment(
   'API_URL',
-  defaultValue: 'http://10.0.2.2:8000/api', // emulator Android
+  defaultValue: 'http://127.0.0.1:8000/api'
+  //'http://10.0.2.2:8000/api', // emulator Android
 );
 
 class ApiException implements Exception {
