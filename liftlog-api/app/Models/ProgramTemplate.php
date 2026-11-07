@@ -3,11 +3,18 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProgramTemplate extends Model
 {
-    public function items() 
-    { 
-        return $this->hasMany(ProgramTemplateItem::class); 
+    protected $guarded = [];
+
+    protected $casts = [
+        'days' => 'integer',
+    ];
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(ProgramTemplateItem::class);
     }
 }

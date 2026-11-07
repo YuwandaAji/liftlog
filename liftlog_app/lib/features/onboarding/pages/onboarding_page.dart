@@ -10,6 +10,7 @@ import '../widgets/body_data_step.dart';
 import '../widgets/experience_step.dart';
 import '../widgets/goal_step.dart';
 import '../widgets/schedule_step.dart';
+import '../../workout_plans/pages/program_recommendation_page.dart';
 
 class OnboardingPage extends StatelessWidget {
   const OnboardingPage({super.key});
@@ -26,7 +27,7 @@ class _OnboardingView extends StatelessWidget {
 
   static const _steps = <Widget>[GoalStep(), ExperienceStep(), ScheduleStep(), BodyDataStep()];
 
-  Future<void> _onPrimary(BuildContext context) async {
+    Future<void> _onPrimary(BuildContext context) async {
     final p = context.read<OnboardingProvider>();
     if (!p.isLast) {
       p.next();
@@ -34,9 +35,10 @@ class _OnboardingView extends StatelessWidget {
     }
     final ok = await p.submit();
     if (ok && context.mounted) {
-      // TODO: setelah halaman "Program untukmu" ada, push halaman itu di sini dan
-      // panggil refreshStatus() di akhir alurnya (supaya weekdays tidak hilang).
-      await context.read<AuthProvider>().refreshStatus();
+      // refreshStatus() dipanggil di halaman Program untukmu, setelah rencana dibuat.
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => ProgramRecommendationPage(weekdays: p.sortedWeekdays),
+      ));
     }
   }
 
