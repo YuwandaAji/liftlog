@@ -1,8 +1,11 @@
 import '../../core/api_client.dart';
+import 'models/profile.dart';
 
 class ProfileRepository {
   ProfileRepository(this._api);
   final ApiClient _api;
+
+  Future<Profile> fetch() async => Profile.fromJson(await _api.get('/profile'));
 
   /// Menyimpan hasil onboarding. `level` dihitung server dari experience + frequency.
   /// `training_weekdays` hanya mengisi `training_days_count`; hari-harinya

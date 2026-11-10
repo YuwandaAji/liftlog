@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/widgets/app_loading.dart';
-import '../../home/pages/home_page.dart';
+import '../../home/pages/main_shell.dart';
 import '../../onboarding/pages/onboarding_page.dart';
 import '../auth_provider.dart';
 import 'login_page.dart';
@@ -31,7 +31,7 @@ class _AuthGateState extends State<AuthGate> {
       case AuthStatus.needsOnboarding:
         return const OnboardingPage();
       case AuthStatus.authenticated:
-        return const HomePage();
+        return const MainShell();
     }
   }
 }

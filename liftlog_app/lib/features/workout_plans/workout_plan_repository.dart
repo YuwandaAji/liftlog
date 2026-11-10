@@ -1,5 +1,7 @@
 import '../../core/api_client.dart';
 import 'models/program_template.dart';
+import 'models/workout_plan.dart';
+
 
 class WorkoutPlanRepository {
   WorkoutPlanRepository(this._api);
@@ -26,5 +28,10 @@ class WorkoutPlanRepository {
       'weekdays': weekdays,
       'template_id': templateId,
     });
+  }
+
+  Future<TodayWorkout> today() async {
+    final res = await _api.get('/workout-plans/today');
+    return TodayWorkout.fromJson(Map<String, dynamic>.from(res as Map));
   }
 }

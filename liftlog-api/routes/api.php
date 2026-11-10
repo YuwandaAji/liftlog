@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\ExerciseController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\ProgramTemplateController;
 use App\Http\Controllers\Api\RecommendationController;
+use App\Http\Controllers\Api\WorkoutPlanController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -20,4 +21,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/program-templates', [ProgramTemplateController::class, 'index']);
     Route::get('/program-templates/{programTemplate}', [ProgramTemplateController::class, 'show']);
     Route::get('/recommendation', RecommendationController::class);
+
+    Route::post('/workout-plans/generate', [WorkoutPlanController::class, 'generate']);
+    Route::get('/workout-plans/today', [WorkoutPlanController::class, 'today']);
+    Route::get('/workout-plans', [WorkoutPlanController::class, 'index']);
+    Route::get('/workout-plans/{workoutPlan}', [WorkoutPlanController::class, 'show']);
 });

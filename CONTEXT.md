@@ -220,7 +220,10 @@ Pertanyaan sekali di awal: tujuan (`goal`), pengalaman (`experience` 0-2), freku
 
 ### Rekomendasi program dan rencana
 
-- Rekomendasi hanya template awal dari `program_templates` (cocokkan `level`, `goal`, `days`). Fallback bertingkat: level + days, lalu beginner.
+- Rekomendasi hanya template awal dari `program_templates` (cocokkan `level`, `goal`, `days`), logikanya di `app/Services/TemplateRecommender.php`. Pencarian bertingkat, berhenti di yang pertama cocok: level + goal + days (`exact`), level + days (`level_days`), satu level di bawahnya dengan days yang sama (`lower_level_days`), beginner + days (`beginner_days`), lalu beginner dengan jumlah hari terdekat (`beginner_nearest`). Nilai `match` dikirim ke klien. Selama tiap kombinasi level dan hari hanya punya satu template, `goal` hanya memengaruhi `match`, bukan template yang terpilih.
+- Template yang di-seed (9): pemula Full Body 2, 3, 4 hari (goal general); menengah Kekuatan 2, 3, 4 hari dan lanjut Kekuatan 2, 3, 4 hari (goal muscle). Goal stamina belum punya template. Angka set, rep, durasi, dan beban dumbbell di seeder adalah nilai awal dan bebas diubah.
+- `generate`: hari terpilih diurutkan lalu dipetakan ke `day_number` 1..n. Bila jumlah hari terpilih tidak sama dengan `days` template, dipakai yang lebih kecil dan sisanya menjadi hari istirahat (`days_per_week` = jumlah yang dipakai). `plan_items.rest_seconds` diisi dari tipe gerakan (bodyweight 60, dumbbell 90). Semua dalam satu transaksi.
+- Zona waktu server: `APP_TIMEZONE=Asia/Jakarta` di `.env`, karena `GET /workout-plans/today` memakai `now()->dayOfWeekIso`.
 - Template disalin ke `workout_plans`, `plan_items`, dan `plan_schedules`. Rencana lama dinonaktifkan (`is_active = false`), tidak dihapus, supaya riwayat sesi tetap punya acuan.
 - User bebas mengedit rencananya (gerakan, urutan, set, rep atau durasi, beban, istirahat, hari). Rekomendasi tidak boleh menimpa tanpa persetujuan.
 - Katalog gerakan tidak bisa diedit user (hanya seeder).
@@ -229,7 +232,7 @@ Pertanyaan sekali di awal: tujuan (`goal`), pengalaman (`experience` 0-2), freku
 ### Jadwal latihan mingguan
 
 - User memilih 2-4 hari (Senin = 1). Hari terpilih diurutkan lalu dipetakan ke `day_number` 1..n di `plan_schedules` (contoh: Senin = Hari 1, Rabu = Hari 2, Sabtu = Hari 3).
-- "Latihan hari ini" ditentukan dari `now()->dayOfWeekIso` terhadap `plan_schedules`. Bila hari ini tidak terjadwal, Beranda menampilkan "Hari istirahat" dengan tombol Latihan bebas. Bila sudah latihan hari ini, tampil "Sudah latihan hari ini".
+- "Latihan hari ini" ditentukan dari `now()->dayOfWeekIso` terhadap `plan_schedules`. Bila hari ini tidak terjadwal, Beranda menampilkan "Hari istirahat" dengan tombol Latihan bebas. Bila sudah latihan hari ini, tampil "Sudah latihan hari ini" (respons `today` membawa objek `session` bila ada; sisi backend menyusul bersama endpoint sesi).
 - Latihan bebas (di luar rencana) membuat sesi dengan `workout_plan_id` kosong.
 
 ### Penanda kalender (di tab Profil)
@@ -285,15 +288,15 @@ Auth dan profil:
 Katalog dan template:
 
 - `GET /api/exercises`, `GET /api/exercises/{id}`
-- `GET /api/program-templates`, `GET /api/program-templates/{id}`
-- `GET /api/recommendation` (pratinjau tanpa menyimpan)
+- `GET /api/program-templates`, `GET /api/program-templates/{id}` (sudah ada; daftar sudah membawa `items.exercise`)
+- `GET /api/recommendation` (sudah ada; pratinjau tanpa menyimpan; respons `{match, template}`; query opsional `days` 2-4)
 
 Rencana:
 
-- `POST /api/workout-plans/generate` (body: `weekdays` = array hari latihan, Senin = 1; `template_id` opsional)
-- `GET /api/workout-plans`, `GET /api/workout-plans/{id}`
+- `POST /api/workout-plans/generate` (body: `weekdays` = array hari latihan, Senin = 1; `template_id` opsional; sudah ada, respons 201 berisi rencana lengkap dengan `items.exercise` dan `schedules`)
+- `GET /api/workout-plans`, `GET /api/workout-plans/{id}` (sudah ada)
 - `PUT /api/workout-plans/{id}`, `DELETE /api/workout-plans/{id}`
-- `GET /api/workout-plans/today`
+- `GET /api/workout-plans/today` (sudah ada; respons `{plan, weekday, scheduled, day_number, schedules, items}`; "sudah latihan hari ini" menyusul bersama endpoint sesi)
 - `PUT /api/workout-plans/{id}/schedule` (ubah hari latihan)
 - `POST /api/workout-plans/{id}/items`, `PUT /api/plan-items/{id}`, `DELETE /api/plan-items/{id}`
 
@@ -310,20 +313,20 @@ Riwayat dan statistik:
 
 - `GET /api/workout-sessions/calendar?month=YYYY-MM`
 - `GET /api/exercises/{id}/progress`
-- `GET /api/personal-records`
-- `GET /api/stats/weekly`
+- `GET /api/personal-records` (kontrak yang diharapkan Flutter: array terbaru lebih dulu, `{exercise_name, metric: weight|reps, value, delta, achieved_at}`; Beranda hanya menampilkan yang tercapai dalam 7 hari terakhir)
+- `GET /api/stats/weekly` (kontrak: `{sessions_done, sessions_target, valid_reps, valid_reps_delta, avg_form_score 0..1, streak_days, done_weekdays: [1,3]}`)
 
 ## 7. Peta halaman (18 halaman, 4 tab bawah)
 
-Tab bawah: Beranda, Katalog, Riwayat, Profil.
+Tab bawah: Beranda, Katalog, Riwayat, Profil (label di desain Stitch: Beranda, Latihan, Aktivitas, Profil; dipakai di aplikasi).
 
 | # | Halaman | Isi |
 |---|---------|-----|
 | 1 | Login | Email dan kata sandi (tanpa "Lupa kata sandi"), disclaimer bukan aplikasi medis |
 | 2 | Register | Nama, email, kata sandi (tanpa kolom ulangi sandi), checkbox wajib "Ketentuan & Privasi", disclaimer |
 | 3 | Onboarding (4 langkah) | Tujuan, pengalaman, frekuensi, hari latihan, data tubuh |
-| 4 | Program untukmu | Rekomendasi program, Pakai atau Pilih program lain |
-| 5 | Pilih program lain | 2-3 template alternatif (bisa disederhanakan jadi dialog) |
+| 4 | Program untukmu | Rekomendasi program (jadwal per hari, perkiraan durasi), Pakai atau Pilih program lain |
+| 5 | Pilih program lain | Halaman penuh (bukan dialog): filter tingkat, kartu template, perbandingan set mingguan |
 | 6 | Beranda (tab) | Latihan hari ini, ringkasan minggu, rekor, kebutuhan harian |
 | 7 | Rencana latihan | Tab hari, urutan gerakan, Tambah gerakan, Ubah hari latihan, Buat ulang rekomendasi |
 | 8 | Edit item rencana | Set, rep atau durasi, beban, istirahat |
@@ -369,6 +372,7 @@ lib/
 │   │   └── app_colors.dart
 │   ├── utils/
 │   │   ├── body_calculator.dart
+│   │   ├── format.dart
 │   │   └── validators.dart
 │   └── widgets/
 │       ├── app_button.dart
@@ -402,7 +406,8 @@ lib/
 │   ├── home/
 │   │   ├── home_provider.dart
 │   │   ├── pages/
-│   │   │   └── home_page.dart
+│   │   │   ├── home_page.dart
+│   │   │   └── main_shell.dart
 │   │   └── widgets/
 │   │       ├── today_workout_card.dart
 │   │       └── weekly_summary_card.dart
@@ -426,10 +431,12 @@ lib/
 │   │   ├── models/
 │   │   │   ├── workout_plan.dart
 │   │   │   ├── plan_item.dart
-│   │   │   └── plan_schedule.dart
+│   │   │   ├── plan_schedule.dart
+│   │   │   └── program_template.dart
 │   │   ├── pages/
 │   │   │   ├── workout_plan_page.dart
 │   │   │   ├── program_recommendation_page.dart
+│   │   │   ├── program_picker_page.dart
 │   │   │   └── edit_plan_item_page.dart
 │   │   └── widgets/
 │   │       ├── plan_day_tab.dart
@@ -471,6 +478,8 @@ lib/
 │   │   ├── history_repository.dart
 │   │   ├── history_provider.dart
 │   │   ├── models/
+│   │   │   ├── personal_record.dart
+│   │   │   ├── weekly_stats.dart
 │   │   │   └── workout_calendar.dart
 │   │   ├── pages/
 │   │   │   ├── history_page.dart
@@ -509,7 +518,7 @@ Aturan struktur:
 - `onboarding` tidak punya model dan repository sendiri. Datanya disimpan lewat `profile_repository.dart`.
 - Kalender hanya di `profile/widgets/activity_calendar.dart`. `history` hanya tab Daftar dan Grafik.
 - `personal_record_card.dart` ada di `shared/widgets` (dipakai Beranda dan Riwayat).
-- `pose/engine/` Dart murni dan punya unit test.
+- `pose/engine/` Dart murni dan punya unit test di `test/pose/` (`angle_calculator_test.dart`, `form_score_test.dart`, `rep_counter_engine_test.dart`), dijalankan dengan `flutter test test/pose`. Tes memakai import relatif ke `lib/`.
 - Alamat API: emulator Android `http://10.0.2.2:8000/api`, HP fisik `http://IP-LAPTOP:8000/api` (server dengan `php artisan serve --host=0.0.0.0`).
 
 ### Fondasi Flutter yang sudah ada
@@ -526,7 +535,12 @@ Aturan struktur:
 - **UI Login dan Register** (sesuai Stitch, latar `surface`): header LIFTLOG dengan titik lime dan "HOME WORKOUT TRACKER", kartu hero bergambar dengan overlay gelap (`assets/images/auth_login.jpg` dan `auth_register.jpg`, terdaftar lewat `assets/images/` di `pubspec.yaml`, fallback warna polos bila file tidak ada), judul MASUK atau DAFTAR, form, tombol pill lime, tautan pindah halaman, dan disclaimer "bukan aplikasi medis". `_Brand` dan `_Hero` saat ini private dan terduplikasi di `login_page.dart` dan `register_page.dart` (rencana: pindah ke `features/auth/widgets/` bila perlu).
 - **Register**: tanpa kolom ulangi sandi (tidak ada di desain). `AuthProvider.register()` tetap menerima konfirmasi dan dipanggil dengan sandi yang sama dua kali, jadi API tidak berubah. Checkbox persetujuan wajib dicentang; bila tombol Daftar ditekan tanpa centang, muncul pesan merah dan border checkbox merah. Teks "Ketentuan & Privasi" hanya teks, belum ada halamannya.
 - **Onboarding** (4 langkah sesuai Stitch: Tujuan, Pengalaman, Frekuensi & Hari, Data tubuh): `OnboardingProvider` menahan seluruh jawaban dan `step`; `onboarding_page.dart` berisi header stepper, tombol LANJUT atau SELESAI, dan footer; tiap langkah ada di `widgets/*_step.dart`, kartu pilihan di `option_card.dart`, bagian bersama di `step_parts.dart`. Tidak ada pilihan awal; LANJUT atau SELESAI nonaktif sampai langkah itu valid. Hari latihan wajib 2-4. Rentang data tubuh harus sama dengan validasi server: berat 20-300 kg, tinggi 100-250 cm, usia 13-100. Nilai ke API: `goal` (`muscle`, `stamina`, `general`), `experience` dan `frequency` 0-2, `activity_level` (`sedentary`, `light`, `moderate`, `active`), `gender` (`male`, `female`). Gambar hero langkah 1: `assets/images/onboarding_goal.jpg` (dumbbell, fallback warna polos). Desain diubah dari Stitch: barbel diganti dumbbell, "BMR Presisi" jadi "Untuk rumus BMR", info "bukan saran medis", badge "Terkunci" dan "Rekomendasi Optimal" tidak dibuat.
-- **Alur SELESAI**: `PUT /api/profile`, lalu `AuthProvider.refreshStatus()` (memanggil `_resolveStatus()`), dan `AuthGate` pindah ke Beranda. TODO: setelah halaman "Program untukmu" ada, SELESAI membuka halaman itu dulu dan `refreshStatus()` dipanggil di akhir alurnya, supaya `training_weekdays` (hanya ada di `onboarding_provider`) tidak hilang sebelum rencana dibuat.
+- **Alur SELESAI**: `PUT /api/profile`, lalu membuka `ProgramRecommendationPage(weekdays)`. Di sana PAKAI PROGRAM INI memanggil `POST /workout-plans/generate`, lalu `AuthProvider.refreshStatus()`, lalu `popUntil` halaman pertama, dan `AuthGate` pindah ke Beranda. Celah: bila aplikasi ditutup setelah `PUT /profile` dan sebelum program dipakai, pengguna masuk Beranda tanpa rencana (Beranda perlu tampilan "belum ada rencana").
+- **Program untukmu dan Pilih program**: `WorkoutPlanProvider` (dipasang di dalam halaman; pindahkan ke `app.dart` saat halaman Rencana dibuat) menyimpan template terpilih, `match`, dan daftar template. Durasi sesi adalah perkiraan 2,5 menit per set (tidak ada kolom durasi). Judul sesi ("FULL BODY", "KAKI & INTI") diturunkan dari nama gerakan di `models/program_template.dart`. Dari desain Stitch dibuang: ikon profil, header Langkah 4/4, "Edisi 2025.1", dan klaim kalibrasi AI; kartu "Target 4 minggu pertama" diganti "Target awal" (aturan progresi: skor form >= 80% dan target tercapai 2 sesi berturut-turut). Aset `assets/images/program_hero.jpg` (fallback warna polos).
+- **Kerangka tab**: `MainShell` (`IndexedStack` + `AppBottomNav`) menggantikan `HomePage` di `AuthGate` untuk status `authenticated`. Tab Latihan, Aktivitas, Profil masih placeholder; tombol KELUAR sementara ada di placeholder Profil. `HomePage` menerima `onFreeWorkout` (pindah ke tab Latihan) dan `onOpenProfile` (pindah ke tab Profil).
+- **Beranda** (`HomeProvider` dipasang di `HomePage`): `today` wajib, sedangkan profil (untuk kebutuhan harian), `stats/weekly`, dan `personal-records` bersifat opsional (gagal diam-diam, bagian itu kosong). Tiga kondisi kartu atas: sesi selesai (bila `today.session` ada), terjadwal, istirahat. Bagian dari "Ringkasan minggu ini" ke bawah sama untuk semua kondisi: ringkasan (SESI, REP VALID, SKOR FORM; "–" bila belum ada data), kartu rekor (tersembunyi bila tidak ada atau lebih dari 7 hari), kebutuhan harian. Dari desain Stitch diubah: label "Siklus 2 · W4" jadi rentang tanggal minggu ini; judul kebutuhan harian tidak memerintah; "Target energi" jadi "Energi (TDEE)"; "Intensitas sedang", "+3% vs rata-rata", dan klaim kalibrasi AI dibuang. Tombol Mulai sesi dan Lihat detail sesi sementara menampilkan snackbar. Aset `assets/images/home_rest.jpg` (fallback warna polos). Ikon profil dan chip streak di header selalu tampil.
+- **Kebutuhan harian dihitung di Flutter** (`core/utils/body_calculator.dart`): Mifflin-St Jeor, TDEE = BMR x `activity_factor`, protein 1,6 g per kg. Data dari `GET /profile` lewat `Profile.needs` (null bila data tubuh belum lengkap).
+- **Mesin pose** (`pose/engine`, Dart murni): `AngleCalculator.degrees` (sudut 2D di titik tengah, NaN bila degenerate) dan `leftIsBetter` (pilih sisi dari rata-rata `likelihood`); `computeFormScore` dan `formLevel` (>= 0,8 valid); `RepCounterEngine` dengan `EngineConfig`. Tiga mode: `zone` (dua zona sudut; zona awal = zona pertama yang tercapai; rep valid bila zona lawan tercapai lalu kembali, "kurang" bila kembali tanpa mencapainya), `baselineDelta` (crunch: baseline dari 15 frame pertama; valid bila sudut turun >= `lower_angle`, kembali bila selisih <= `upper_angle`) dan `durationRange` (plank: timer hanya saat sudut di rentang; selisih waktu antar frame dibatasi 1 detik). Penghalus EMA (`smoothingAlpha` 0,5) dan abaikan getaran: gerak keluar zona awal baru dihitung "kurang" bila menempuh >= 25% lebar rentang. `EngineConfig.fromExercise` memilih mode dari `kind` dan nama; crunch dikenali dari namanya karena tabel `exercises` belum punya kolom mode. Semua ambang adalah tebakan awal yang dikalibrasi di HP nyata. Estimasi pose memakai model pretrained ML Kit (BlazePose); penghitungan rep dan skor form berbasis aturan sudut, bukan model belajar.
 
 ### Acuan UI: desain Stitch
 
@@ -578,11 +592,12 @@ Backend (`liftlog-api`):
 - [x] Model dan relasi (`$guarded`, `$casts`, hasMany, belongsTo)
 - [x] `GET /api/exercises` dan `GET /api/exercises/{id}` (katalog, filter `type`)
 - [x] Seeder `ExerciseSeeder` (8 gerakan, konfigurasi sendi, `youtube_id` terisi; `video_source` 6 gerakan masih placeholder)
-- [ ] Seeder `ProgramTemplateSeeder` (2-3 template)
+- [x] Seeder `ProgramTemplateSeeder` (9 template, idempoten; goal stamina belum ada template)
 - [x] Auth: register, login, logout (Sanctum), buat `profiles` kosong saat register dibungkus `DB::transaction` (register diuji end-to-end lewat aplikasi)
 - [x] Profil (`GET/PUT /api/profile`), `level` dihitung server dari `experience + frequency`, `activity_level` menjadi `activity_factor`, `training_weekdays` menjadi `training_days_count` (diuji lewat onboarding)
-- [ ] Template, rekomendasi, dan generate rencana
-- [ ] Rencana (CRUD, jadwal, today)
+- [x] Template, rekomendasi (`TemplateRecommender`), dan `POST /workout-plans/generate` (diuji dari aplikasi)
+- [x] Rencana: `GET /workout-plans`, `GET /workout-plans/{id}`, `GET /workout-plans/today`
+- [ ] Rencana: update, hapus, ubah jadwal, CRUD item
 - [ ] Sesi dan set, kalender, progres, personal record
 
 Frontend (`liftlog_app`):
@@ -593,8 +608,9 @@ Frontend (`liftlog_app`):
 - [x] Auth Flutter: model, repository, provider, `AuthGate`, login, register (UI sudah sesuai desain Stitch, termasuk checkbox persetujuan; register sudah diuji dengan API)
 - [ ] Katalog dan detail gerakan
 - [x] Onboarding 4 langkah, tersimpan lewat `PUT /api/profile`
-- [ ] Program untukmu (rekomendasi template), Beranda
-- [ ] `pose/engine` plus unit test
+- [x] Program untukmu dan Pilih program (rekomendasi, pilih template, buat rencana)
+- [x] Beranda (UI tiga kondisi dan kerangka tab; ringkasan minggu, rekor, dan kondisi sudah latihan menunggu endpoint statistik dan sesi)
+- [x] `pose/engine` (Dart murni) dan unit test ditulis; hasil `flutter test test/pose` lulus
 - [ ] Kamera live, Sesi latihan, rencana, riwayat, profil dan kalender
 
 Dokumen lain:
