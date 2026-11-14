@@ -183,7 +183,7 @@ class _RestCard extends StatelessWidget {
               fit: StackFit.expand,
               children: [
                 Image.asset(
-                  'assets/images/home_rest.jpg',
+                  'assets/images/home_rest.png',
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stack) =>
                       const ColoredBox(color: AppColors.surface),

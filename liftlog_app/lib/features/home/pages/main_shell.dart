@@ -4,6 +4,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/bottom_navigation_bar.dart';
 import '../../auth/auth_provider.dart';
 import 'home_page.dart';
+import '../../exercises/pages/exercise_catalog_page.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -22,7 +23,7 @@ class _MainShellState extends State<MainShell> {
         onFreeWorkout: () => setState(() => _index = 1),
         onOpenProfile: () => setState(() => _index = 3),
       ),
-      const _ComingSoon(title: 'LATIHAN'),
+      ExerciseCatalogPage(onOpenProfile: () => setState(() => _index = 3)),
       const _ComingSoon(title: 'AKTIVITAS'),
       const _ProfileStub(),
     ];
